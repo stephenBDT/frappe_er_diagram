@@ -1,0 +1,18 @@
+include MANIFEST.in
+include requirements.txt
+include *.json
+include *.md
+include *.py
+include *.txt
+recursive-include er_diagram *.css
+recursive-include er_diagram *.csv
+recursive-include er_diagram *.html
+recursive-include er_diagram *.ico
+recursive-include er_diagram *.js
+recursive-include er_diagram *.json
+recursive-include er_diagram *.md
+recursive-include er_diagram *.png
+recursive-include er_diagram *.py
+recursive-include er_diagram *.svg
+recursive-include er_diagram *.txt
+recursive-exclude er_diagram *.pyc
