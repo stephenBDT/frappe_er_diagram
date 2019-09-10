@@ -10,7 +10,7 @@ def get_data():
           "items": [
               {
                   "type": "doctype",
-                  "name": "Installed Modules",
+                  "name": "Module Def",
                   "label": _("Installed Modules"),
                   "description": _("Show all the Modules that are currently installed"),
               },
