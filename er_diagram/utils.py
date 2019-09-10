@@ -25,7 +25,7 @@ def getDot(items, addFields=False):
 
     def getItemInfo(mod):
         print(mod)
-        app_name = mod['module_app_name'].replace(" ", "_").lower()
+        app_name = mod['app_name'].replace(" ", "_").lower()
         module_name = mod['module_name'].replace(" ", "_").lower()
         outFileName = app_name + module_name + addFieldsFlag
         docTypePath = "../apps/" + app_name + "/" +app_name + "/" + module_name + "/"
@@ -41,11 +41,14 @@ def getDot(items, addFields=False):
 
     completedDotGeneration = runCmd(["../apps/er_diagram/frappe-er-exe", addFieldsFlag, "-o" + outFileName] + docTypeFilePaths)
     if completedDotGeneration.returncode == 0:
-        completedPngGeneration = runCmd(["dot", "-Tpng", "-o" + outPath, outFileName])
-        if completedPngGeneration.returncode == 0:
-            return "pngs/" + outFileName + ".png"
-        else:
-            return "Crashed in Png Generation: " + completedPngGeneration.stderr
+        try:
+            completedPngGeneration = runCmd(["dot", "-Tpng", "-o" + outPath, outFileName])
+            if completedPngGeneration.returncode == 0:
+                return {"status": "sucess", "data": "pngs/" + outFileName + ".png"}
+            else:
+                return {"status": "failure", "data": "Crashed in Png Generation: " + completedPngGeneration.stderr}
+        except Exception as e:
+            return {"status": "failure", "data": "Please make sure you have graphvizs' dot application instaslled on your server"}
     else:
         return "Crashed in Dot Generation: " + completedDotGeneration.stderr
 
@@ -54,7 +57,6 @@ def getDot(items, addFields=False):
 @frappe.whitelist()
 def run(app_name, module_name, optional = None ):
 
-    print("PRINTING ARGUMENT: ------------------------")
     if optional is not None:
         list(map(lambda t: print(t), json.loads(optional)))
     app_name = app_name.replace(" ", "_").lower()
@@ -65,15 +67,18 @@ def run(app_name, module_name, optional = None ):
     outPath = "../apps/er_diagram/er_diagram/www/" + outFileName + ".png"
     # This always executes in bench/sites/
     debug("generating er for: " + target.lower())
-    completedDotGeneration = subprocess.run(["../apps/er_diagram/frappe-er-exe", "-o" + outFileName, target.lower()], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if completedDotGeneration.returncode == 0:
-        completedPngGeneration = subprocess.run(["dot", "-Tpng", "-o" + outPath, outFileName], universal_newlines=True, stdout=subprocess.PIPE)
-        if completedPngGeneration.returncode == 0:
-            return outFileName + ".png"
+
+    import tempfile
+    with tempfile.TemporaryFile() as dotFile:
+        completedDotGeneration = subprocess.run(["../apps/er_diagram/frappe-er-exe", "-o" + dotFile, target.lower()], universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if completedDotGeneration.returncode == 0:
+            completedPngGeneration = subprocess.run(["dot", "-Tpng", "-o" + outPath, dotFile], universal_newlines=True, stdout=subprocess.PIPE)
+            if completedPngGeneration.returncode == 0:
+                return outFileName + ".png"
+            else:
+                return "Crashed in Png Generation"
         else:
-            return "Crashed in Png Generation"
-    else:
-        return "Crashed in Dot Generation: " + completedDotGeneration.stderr
+            return "Crashed in Dot Generation: " + completedDotGeneration.stderr
 
 @frappe.whitelist()
 def hello(names):
