@@ -9,10 +9,9 @@ def debug(s):
 
 
 @frappe.whitelist()
-def getDot(items, addFields=False):
+def getDot(items, addFields=False, graphML=False):
 
-    # TODO UGLY!! No need for two flags!
-    addFieldsFlag = "-l" if addFields else "-f"
+    addFieldsFlag = [] if addFields else ["-l"]
 
     modules = json.loads(items)
     print ("-------------------------------------")
@@ -27,26 +26,30 @@ def getDot(items, addFields=False):
         print(mod)
         app_name = mod['app_name'].replace(" ", "_").lower()
         module_name = mod['module_name'].replace(" ", "_").lower()
-        outFileName = app_name + module_name + addFieldsFlag
+        outFileName = app_name + module_name + ("" if addFields else "-l")
         docTypePath = "../apps/" + app_name + "/" +app_name + "/" + module_name + "/"
         return (docTypePath, outFileName)
 
     relevantItemInformation = list(map(getItemInfo, modules))
     docTypeFilePaths = list(map(lambda a: a[0], relevantItemInformation))
     outFileName = "".join(list(map(lambda a:a[1], relevantItemInformation)))
-    outPath = "../apps/er_diagram/er_diagram/www/pngs/" + outFileName + ".png"
+    if graphML:
+        outFileName = "../apps/er_diagram/er_diagram/www/graphml/" + outFileName + ".graphml"
+        graphMLFlag = ["-y"]
+    else:
+        outPath = "../apps/er_diagram/er_diagram/www/pngs/" + outFileName + ".png"
+        graphMLFlag = []
 
-    # TODO UGLY!! No need for two flags!
-    addFieldsFlag = "-l" if addFields else "-f"
-
-    completedDotGeneration = runCmd(["../apps/er_diagram/frappe-er-exe", addFieldsFlag, "-o" + outFileName] + docTypeFilePaths)
+    completedDotGeneration = runCmd((["../apps/er_diagram/frappe-er-exe"] + addFieldsFlag + graphMLFlag + ["-o" + outFileName]) + docTypeFilePaths)
+    print("Got compeltion return code: {}".format(completedDotGeneration))
     if completedDotGeneration.returncode == 0:
+        if graphML:
+            return {"status": "success", "data": outFileName.split('er_diagram/www')[1]}
         try:
             completedPngGeneration = runCmd(["dot", "-Tpng", "-o" + outPath, outFileName])
             if completedPngGeneration.returncode == 0:
                 return {"status": "sucess", "data": "pngs/" + outFileName + ".png"}
-            else:
-                return {"status": "failure", "data": "Crashed in Png Generation: " + completedPngGeneration.stderr}
+            return {"status": "failure", "data": "Crashed in Png Generation: " + completedPngGeneration.stderr}
         except Exception as e:
             return {"status": "failure", "data": "Please make sure you have graphvizs' dot application instaslled on your server"}
     else:
